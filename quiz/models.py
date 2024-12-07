@@ -5,6 +5,7 @@ from time import timezone
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils.timezone import now
 
 
 class User(AbstractUser):
@@ -28,22 +29,22 @@ class User(AbstractUser):
     level = models.CharField(max_length=100, choices=LevelChoices.choices, default=LevelChoices.BEGINNER)
     balls = models.IntegerField(default=0)
     gifts = models.ManyToManyField('Shop')
-    is_active = models.BooleanField(default=False)
-    status = models.CharField(max_length=100, choices=UserStatus.choices, default=UserStatus.INACTIVE)
+    is_verified = models.BooleanField(default=False)
+    # status = models.CharField(max_length=100, choices=UserStatus.choices, default=UserStatus.INACTIVE)
 
     @property
     def create_verification_code(self):
         code = "".join(choices("0123456789", k=4))
         UserConfirmation.objects.create(
-            user=self,
+            user_id=self.id,
             code=code,
-            expire_time=datetime.datetime.now() + timedelta(minutes=5),
+            expire_time=now() + timedelta(minutes=5),
         )
         return code
 
 
 class UserConfirmation(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='code')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='code')
     code = models.IntegerField()
     expire_time = models.DateTimeField(null=True, blank=True)
     is_confirmed = models.BooleanField(default=False)

@@ -1,5 +1,5 @@
 import datetime
-
+from django.utils.timezone import now
 from django.contrib.auth import authenticate
 from drf_spectacular.utils import OpenApiExample, extend_schema
 from rest_framework import status, permissions
@@ -29,10 +29,10 @@ class RegisterAPIView(APIView):
         ]
     )
     def post(self, request):
+        print(request.user)
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            user.create_verification_code
             refresh = RefreshToken.for_user(user)
             return Response({
                 "user": serializer.data,
@@ -97,7 +97,6 @@ class RefreshTokenAPIView(APIView):
             }, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# Test Endpoints
 
 class UserConfirmationView(APIView):
     permission_classes = (permissions.IsAuthenticated, )
@@ -107,12 +106,13 @@ class UserConfirmationView(APIView):
         user = request.user
         serializer = ConfSerializer(data=request.data)
         if serializer.is_valid():
+            print(serializer.validated_data.get('code'))
             self.verify_code(user, serializer.validated_data.get("code"))
             data = {
                 'status': 'Success',
                 'message': f'Confirmation code {serializer.validated_data["code"]}',
-                'access_token': user.token()['access_token'],
-                'refresh_token': user.token()['refresh_token']
+                # 'access_token': user.token()['access_token'],
+                # 'refresh_token': user.token()['refresh_token']
             }
         else:
             data = {
@@ -126,7 +126,7 @@ class UserConfirmationView(APIView):
         verification = user.code.filter(
             code=code,
             is_confirmed=False,
-            expire_time__gte=datetime.now()
+            expire_time__gte=now()
         )
         if not verification.exists():
             raise ValidationError({
@@ -134,12 +134,8 @@ class UserConfirmationView(APIView):
                 'message': 'Code is invalid or expired.'
             })
         verification.update(is_confirmed=True)
-        if user.status == User.UserStatus.INACTIVE:
-            user.status = User.UserStatus.ACTIVE
-        user.save(update_fields=['status'])
+        user.is_verified = True
+        user.save()
+        return user
 
-
-
-
-
-
+# Test Endpoints

@@ -12,11 +12,13 @@ class RegisterSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'password']
 
     def create(self, validated_data):
-        user = User.objects.create_user(
+        user = User.objects.create(
             username=validated_data['username'],
             email=validated_data.get('email'),
-            password=validated_data['password']
         )
+        user.set_password(validated_data['password'])
+        user.save()
+        user.create_verification_code
         return user
 
 class LoginSerializer(serializers.Serializer):
