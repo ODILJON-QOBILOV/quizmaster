@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from quiz.models import User, Test
+from quiz.models import User, Test, Subjects, Question, Shop
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -28,7 +28,6 @@ class LoginSerializer(serializers.Serializer):
 class ConfSerializer(serializers.Serializer):
     code = serializers.CharField(max_length=4, write_only=True)
 
-
 class RefreshTokenSerializer(serializers.Serializer):
     refresh = serializers.CharField()
 
@@ -41,7 +40,46 @@ class RefreshTokenSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid refresh token.")
         return attrs
 
-class TestSerializer(serializers.ModelSerializer):
+# class TestSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = Test
+#         fields = ('name', 'subject', 'level', 'balls')
+
+class SubjectsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Subjects
+        fields = '__all__'
+
+class TestsSerializer(serializers.ModelSerializer):
+    subject = serializers.CharField(source='subject.name', read_only=True)
     class Meta:
         model = Test
         fields = ('name', 'subject', 'level', 'balls')
+
+class QuestionsSerializer(serializers.ModelSerializer):
+    test = serializers.CharField(source='test.name')
+    test_level = serializers.CharField(source='test.level')
+    test_balls = serializers.IntegerField(source='test.balls')
+    options = serializers.SerializerMethodField()
+    class Meta:
+        model = Question
+        fields = ('about', 'test', 'test_level', 'test_balls', 'options')
+
+    def get_options(self, object):
+        return [
+            {
+                "name": option.name,
+                "is_true": option.is_true
+            }
+            for option in object.options.all()
+        ]
+
+class ShopSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Shop
+        fields = '__all__'
+
+class BuyItemInShopSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Shop
+        fields = ('name', )

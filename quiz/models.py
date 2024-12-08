@@ -28,7 +28,7 @@ class User(AbstractUser):
     role = models.CharField(max_length=100, choices=RoleChoices.choices, default=RoleChoices.USER)
     level = models.CharField(max_length=100, choices=LevelChoices.choices, default=LevelChoices.BEGINNER)
     balls = models.IntegerField(default=0)
-    gifts = models.ManyToManyField('Shop')
+    gifts = models.ManyToManyField('Shop', blank=True, related_name='gift')
     is_verified = models.BooleanField(default=False)
     # status = models.CharField(max_length=100, choices=UserStatus.choices, default=UserStatus.INACTIVE)
 
@@ -62,9 +62,9 @@ class Shop(models.Model):
     about = models.TextField()
     amount = models.IntegerField()
     image = models.ImageField(upload_to='shop/images/', null=True, blank=True)
-    is_active = models.BooleanField()
+    is_active = models.BooleanField(blank=True, null=True)
     price = models.FloatField()
-    discount = models.FloatField()
+    discount = models.FloatField(blank=True, null=True)
 
     def __str__(self):
         return self.name
@@ -72,6 +72,8 @@ class Shop(models.Model):
     def save(self, *args, **kwargs):
         if self.amount == 0:
             self.is_active = False
+        if self.amount > 0:
+            self.is_active = True
         return super().save(*args, **kwargs)
 
 class Subjects(models.Model):
@@ -95,9 +97,9 @@ class Test(models.Model):
         if self.level == self.LevelChoices.BEGINNER:
             self.balls += 10
         elif self.level == self.LevelChoices.INTERMEDIATE:
-            self.level += 20
+            self.balls += 20
         elif self.level == self.LevelChoices.ADVANCED:
-            self.level += 30
+            self.balls += 30
         super().save(*args, **kwargs)
 
     def __str__(self):
