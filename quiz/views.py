@@ -13,7 +13,8 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from quiz.filters import TestFilter, SubjectFilter, QuestionsFilter
 from quiz.models import User, Subjects, Test, Question, Shop
 from quiz.serializers import RegisterSerializer, LoginSerializer, RefreshTokenSerializer, ConfSerializer, \
-    SubjectsSerializer, TestsSerializer, QuestionsSerializer, ShopSerializer, BuyItemInShopSerializer
+    SubjectsSerializer, TestsSerializer, QuestionsSerializer, ShopSerializer, BuyItemInShopSerializer, \
+    ProfileUserSerializer, ChangePasswordSerializer
 
 
 class RegisterAPIView(APIView):
@@ -191,7 +192,7 @@ class QuestionDetailAPIView(generics.RetrieveAPIView):
     serializer_class = QuestionsSerializer
     permission_classes = (permissions.IsAuthenticated, )
 
-class ShopGetItemAPIView(APIView):
+class ShopGetItemsAPIView(APIView):
     permission_classes = (permissions.IsAuthenticated, )
     @extend_schema(
         request=ShopSerializer,
@@ -200,6 +201,11 @@ class ShopGetItemAPIView(APIView):
         shop = Shop.objects.all()
         serializer = ShopSerializer(shop, many=True)
         return Response(serializer.data)
+
+class ShopRetrieveAPIView(generics.RetrieveAPIView):
+    permission_classes = (permissions.IsAuthenticated, )
+    queryset = Shop.objects.all()
+    serializer_class = ShopSerializer
 
 class ShopBuyItemAPIView(APIView):
     permission_classes = (permissions.IsAuthenticated, )
@@ -222,9 +228,32 @@ class ShopBuyItemAPIView(APIView):
 
         return Response({"message": "Item purchased successfully!"}, status=status.HTTP_200_OK)
 
+class ProfileUserGetUpdateAPIView(APIView):
+    permission_classes = (permissions.IsAuthenticated, )
+    def get(self, request):
+        user = request.user
+        serializer = ProfileUserSerializer(user)
+        return Response(serializer.data)
+    @extend_schema(request=ProfileUserSerializer)
+    def put(self, request):
+        user = request.user
+        serializer = ProfileUserSerializer(user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
+class ChangePasswordAPIView(APIView):
+    permission_classes = (permissions.IsAuthenticated,)
+    @extend_schema(request=ChangePasswordSerializer, tags=['auth'])
+    def post(self, request):
+        serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
 
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Password changed successfully."}, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # test user
-# username: John, password: 1234
+# username: John, password: 1111
 # refresh_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTczMzc2NDM5OSwiaWF0IjoxNzMzNjc3OTk5LCJqdGkiOiJhOTQzYjA4NzMzZWE0MGIyODUxNGM5ZGM4MTk2YWIzZiIsInVzZXJfaWQiOjJ9.juUd41UmH26INY8O25ujqpeA6yyF_3e5coIKt-cf4mA

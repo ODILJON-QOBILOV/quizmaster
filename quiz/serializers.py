@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from quiz.models import User, Test, Subjects, Question, Shop
@@ -83,3 +84,49 @@ class BuyItemInShopSerializer(serializers.ModelSerializer):
     class Meta:
         model = Shop
         fields = ('name', )
+
+class ShopItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Shop
+        fields = ('id', 'name', 'about', 'price', 'discount', 'image', 'is_active')
+
+class ProfileUserSerializer(serializers.ModelSerializer):
+    gifts = ShopItemSerializer(many=True, read_only=True)
+    role = serializers.CharField(read_only=True)
+    balls = serializers.IntegerField(read_only=True)
+    is_verified = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = (
+            'username', 'email', 'date_of_birth', 'image', 'about', 'role',
+            'level', 'balls', 'gifts', 'is_verified'
+        )
+
+class ChangePasswordSerializer(serializers.ModelSerializer):
+    current_password = serializers.CharField(write_only=True)
+    new_password = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = ['current_password', 'new_password']
+
+    def validate(self, attrs):
+        user = self.context['request'].user
+
+        current_password = attrs.get('current_password')
+        if not user.check_password(current_password):
+            raise ValidationError("Current password is incorrect.")
+
+        new_password = attrs.get('new_password')
+        if current_password == new_password:
+            raise ValidationError("New password cannot be the same as the current password.")
+
+        return attrs
+
+    def save(self):
+        user = self.context['request'].user
+        new_password = self.validated_data['new_password']
+        user.set_password(new_password)
+        user.save()
+        return user
